@@ -1,4 +1,5 @@
 import networkx as nx
+import matplotlib.pyplot as plt
 import numpy as np
 from qiskit_optimization import QuadraticProgram
 from qiskit_optimization.applications import Maxcut
@@ -7,11 +8,40 @@ from qiskit_aer import AerSimulator
 from qiskit import transpile
 from qiskit.visualization import plot_histogram
 
-# Step 1: Define the Graph
-square_graph = nx.Graph([(0, 1), (1, 2), (2, 3), (3, 0)])
+
+# Step 1: Define the Bank Layout Graph with proper node indexing
+node_names = [
+    "Lobby", "entrance", "front desk",
+    "control room", "Laser beam", "Security", "Office",
+    "Vault 1", "Vault 2"
+]
+
+# Create mapping between names and indices
+name_to_index = {name: i for i, name in enumerate(node_names)}
+index_to_name = {i: name for i, name in enumerate(node_names)}
+
+# Initialize graph with integer nodes
+bank_graph = nx.Graph()
+bank_graph.add_nodes_from(range(len(node_names)))
+
+# Add edges (using integer indices)
+edges = [
+    (name_to_index["entrance"], name_to_index["Lobby"]),
+    (name_to_index["entrance"], name_to_index["front desk"]),
+    (name_to_index["Lobby"], name_to_index["front desk"]),
+    (name_to_index["Lobby"], name_to_index["control room"]),
+    (name_to_index["Lobby"], name_to_index["Office"]),
+    (name_to_index["front desk"], name_to_index["control room"]),
+    (name_to_index["control room"], name_to_index["Office"]),
+    (name_to_index["Security"], name_to_index["Office"]),
+    (name_to_index["Security"], name_to_index["Laser beam"]),
+    (name_to_index["Laser beam"], name_to_index["Vault 1"]),
+    (name_to_index["Laser beam"], name_to_index["Vault 2"])
+]
+bank_graph.add_edges_from(edges)
 
 # Step 2: Convert Graph to QUBO using Maxcut class
-maxcut = Maxcut(square_graph)
+maxcut = Maxcut(bank_graph)
 qubo = maxcut.to_quadratic_program()
 
 # Step 3: Convert QUBO to Ising Hamiltonian
@@ -66,9 +96,16 @@ def calculate_max_cut(graph):
     return max_cuts, best_partition
 
 # Step 10: Calculate the maximum cut for the graph
-max_cuts, best_partition = calculate_max_cut(square_graph)
+max_cuts, best_partition = calculate_max_cut(bank_graph)
 
 # Step 11: Output the results
 print(f"Maximum number of cuts: {max_cuts}")
 print(f"Best partition: Set A: {best_partition[0]}, Set B: {best_partition[1]}")
 print(f"Cut edges: {best_partition[2]}")
+
+# Visualize
+pos = nx.spring_layout(bank_graph)
+nx.draw(bank_graph, pos, with_labels=True, node_color='lightblue')
+nx.draw_networkx_edge_labels(bank_graph, pos, edge_labels=nx.get_edge_attributes(bank_graph, 'weight'))
+plt.title("Bank Security System")
+plt.show()
